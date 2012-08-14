@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
-    "math/rand"
 )
 
 type Philosopher struct {
@@ -22,34 +22,37 @@ func NewPhilosopher(id int) *Philosopher {
 	}
 }
 
+func (p *Philosopher) Println(s string) {
+	fmt.Printf("[%v] %v\n", p.id, s)
+}
+
 func (p *Philosopher) Dine() {
-    time.Sleep(1 * time.Second)
 	for {
-		fmt.Printf("[%v] Thinking...\n", p.id)
+		p.Println("Thinking...")
 		time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond)
 
 		select {
 		case p.hasRight = <-p.right:
-			fmt.Printf("[%v] Have right...\n", p.id)
+			p.Println("Have right...")
 			select {
 			case p.hasLeft = <-p.left:
-				fmt.Printf("[%v] Eating...\n", p.id)
+				p.Println("Eating...")
 				time.Sleep(1 * time.Second)
 				p.left <- p.hasLeft
 			case <-time.After(1 * time.Second):
-				fmt.Println("Giving up right")
+				p.Println("Giving up right")
 				p.right <- p.hasRight
 			}
 
 		case p.hasLeft = <-p.left:
-			fmt.Println("Have left")
+			p.Println("Have left")
 			select {
 			case p.hasRight = <-p.right:
-				fmt.Printf("[%v] Eating...\n", p.id)
+				p.Println("Eating...")
 				time.Sleep(1 * time.Second)
 				p.right <- p.hasRight
 			case <-time.After(1 * time.Second):
-				fmt.Println("Giving up left")
+				p.Println("Giving up left")
 				p.left <- p.hasLeft
 			}
 		}
@@ -65,7 +68,6 @@ type Place struct {
 }
 
 func (p *Place) Wait() {
-    time.Sleep(1 * time.Second)
 	for {
 		if p.hasFork {
 			select {
