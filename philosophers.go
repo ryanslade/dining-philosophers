@@ -7,11 +7,9 @@ import (
 )
 
 type Philosopher struct {
-	id       int
-	hasLeft  bool
-	hasRight bool
-	right    chan bool
-	left     chan bool
+	id    int
+	right chan bool
+	left  chan bool
 }
 
 func NewPhilosopher(id int) *Philosopher {
@@ -26,34 +24,40 @@ func (p *Philosopher) Println(s string) {
 	fmt.Printf("[%v] %v\n", p.id, s)
 }
 
+func (p *Philosopher) SleepDuration() time.Duration {
+	return time.Duration(rand.Intn(1000)) * time.Millisecond
+}
+
 func (p *Philosopher) Dine() {
 	for {
 		p.Println("Thinking...")
-		time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond)
+		time.Sleep(p.SleepDuration())
 
 		select {
-		case p.hasRight = <-p.right:
+		case <-p.right:
 			p.Println("Have right...")
 			select {
-			case p.hasLeft = <-p.left:
+			case <-p.left:
 				p.Println("Eating...")
-				time.Sleep(1 * time.Second)
-				p.left <- p.hasLeft
-			case <-time.After(1 * time.Second):
+				time.Sleep(p.SleepDuration())
+				p.left <- true
+				p.right <- true
+			case <-time.After(p.SleepDuration()):
 				p.Println("Giving up right")
-				p.right <- p.hasRight
+				p.right <- true
 			}
 
-		case p.hasLeft = <-p.left:
+		case <-p.left:
 			p.Println("Have left")
 			select {
-			case p.hasRight = <-p.right:
+			case <-p.right:
 				p.Println("Eating...")
-				time.Sleep(1 * time.Second)
-				p.right <- p.hasRight
-			case <-time.After(1 * time.Second):
+				time.Sleep(p.SleepDuration())
+				p.right <- true
+				p.left <- true
+			case <-time.After(p.SleepDuration()):
 				p.Println("Giving up left")
-				p.left <- p.hasLeft
+				p.left <- true
 			}
 		}
 
