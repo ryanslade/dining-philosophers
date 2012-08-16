@@ -24,41 +24,34 @@ func (p *Philosopher) Println(s string) {
 	fmt.Printf("[%v] %v\n", p.id, s)
 }
 
-func (p *Philosopher) SleepDuration() time.Duration {
+func sleepDuration() time.Duration {
 	return time.Duration(rand.Intn(1000)) * time.Millisecond
+}
+
+func (p *Philosopher) tryEat(haveFork, waitFork chan bool) {
+	p.Println("Have fork...")
+	select {
+	case <-waitFork:
+		p.Println("Eating...")
+		time.Sleep(sleepDuration())
+		waitFork <- true
+		haveFork <- true
+	case <-time.After(sleepDuration()):
+		p.Println("Giving up fork")
+		haveFork <- true
+	}
 }
 
 func (p *Philosopher) Dine() {
 	for {
 		p.Println("Thinking...")
-		time.Sleep(p.SleepDuration())
+		time.Sleep(sleepDuration())
 
 		select {
 		case <-p.right:
-			p.Println("Have right...")
-			select {
-			case <-p.left:
-				p.Println("Eating...")
-				time.Sleep(p.SleepDuration())
-				p.left <- true
-				p.right <- true
-			case <-time.After(p.SleepDuration()):
-				p.Println("Giving up right")
-				p.right <- true
-			}
-
+            p.tryEat(p.right, p.left)
 		case <-p.left:
-			p.Println("Have left")
-			select {
-			case <-p.right:
-				p.Println("Eating...")
-				time.Sleep(p.SleepDuration())
-				p.right <- true
-				p.left <- true
-			case <-time.After(p.SleepDuration()):
-				p.Println("Giving up left")
-				p.left <- true
-			}
+            p.tryEat(p.left, p.right)
 		}
 
 	}
