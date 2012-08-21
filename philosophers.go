@@ -6,29 +6,23 @@ import (
 	"time"
 )
 
-type Philosopher struct {
-	id    int
-	right chan bool
-	left  chan bool
+type fork bool
+
+func sleepDuration() time.Duration {
+	return time.Duration(rand.Intn(1000)) * time.Millisecond
 }
 
-func NewPhilosopher(id int) *Philosopher {
-	return &Philosopher{
-		id:    id,
-		right: make(chan bool),
-		left:  make(chan bool),
-	}
+type Philosopher struct {
+	id    int
+	right chan fork
+	left  chan fork
 }
 
 func (p *Philosopher) Println(s string) {
 	fmt.Printf("[%v] %v\n", p.id, s)
 }
 
-func sleepDuration() time.Duration {
-	return time.Duration(rand.Intn(1000)) * time.Millisecond
-}
-
-func (p *Philosopher) tryEat(haveFork, waitFork chan bool) {
+func (p *Philosopher) tryEat(haveFork, waitFork chan fork) {
 	p.Println("Have fork...")
 	select {
 	case <-waitFork:
@@ -49,9 +43,9 @@ func (p *Philosopher) Dine() {
 
 		select {
 		case <-p.right:
-            p.tryEat(p.right, p.left)
+			p.tryEat(p.right, p.left)
 		case <-p.left:
-            p.tryEat(p.left, p.right)
+			p.tryEat(p.left, p.right)
 		}
 
 	}
@@ -60,8 +54,8 @@ func (p *Philosopher) Dine() {
 type Place struct {
 	id      int
 	hasFork bool
-	left    chan bool
-	right   chan bool
+	left    chan fork
+	right   chan fork
 }
 
 func (p *Place) Wait() {
@@ -91,7 +85,7 @@ func main() {
 	places := make([]*Place, numPhilosophers)
 
 	for i := 0; i < numPhilosophers; i++ {
-		philosophers[i] = NewPhilosopher(i)
+		philosophers[i] = &Philosopher{id: i, left: make(chan fork), right: make(chan fork)}
 	}
 
 	for i := 0; i < numPhilosophers-1; i++ {
@@ -100,8 +94,8 @@ func main() {
 	places[numPhilosophers-1] = &Place{id: numPhilosophers - 1, hasFork: true, left: philosophers[numPhilosophers-1].right, right: philosophers[0].left}
 
 	for i := 0; i < numPhilosophers; i++ {
-		go philosophers[i].Dine()
 		go places[i].Wait()
+		go philosophers[i].Dine()
 	}
 
 	select {}
